@@ -1,6 +1,6 @@
 // アプリ本体をキャッシュして、電波がなくても起動・編集できるようにする。
-const CACHE = 'shashin-v1';
-const SHELL = ['./', 'index.html', 'style.css', 'engine.js', 'extract.js', 'app.js', 'manifest.webmanifest', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'shashin-v2';
+const SHELL = ['./', 'index.html', 'style.css', 'engine.js', 'extract.js', 'presets.js', 'app.js', 'manifest.webmanifest', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

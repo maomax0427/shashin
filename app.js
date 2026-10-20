@@ -17,6 +17,9 @@ function saveDb() {
   try { localStorage.setItem(KEY, JSON.stringify(db)); }
   catch (e) { toast('保存できませんでした（容量がいっぱいかもしれません）'); }
 }
+const BUILT = BUILTIN.map(b => ({ ...b, builtin: true, params: E.normalize(b.params) }));
+const allPresets = () => [...db.presets, ...BUILT];
+const getPreset = id => allPresets().find(x => x.id === id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 // ---------- 共通 ----------
@@ -138,24 +141,71 @@ function renderHome() {
   const el = $('#presetList');
   if (!db.presets.length) {
     el.className = '';
-    el.innerHTML = '<div class="empty">まだプリセットがありません。<br>「お手本からプリセットを作る」から始めましょう。</div>';
-    return;
+    el.innerHTML = '<div class="empty">まだありません。「お手本からプリセットを作る」で作るか、下のおすすめから使ってみてください。</div>';
+  } else {
+    el.className = 'preset-grid';
+    el.innerHTML = db.presets.map(cardHtml).join('');
   }
-  el.className = 'preset-grid';
-  el.innerHTML = db.presets.map(p => `<button class="preset-card" data-id="${p.id}">
-      <img src="${p.thumb || ''}" alt="">
-      <div><b>${esc(p.name)}</b><small>${new Date(p.created).toLocaleDateString('ja-JP')}</small></div></button>`).join('');
-  el.querySelectorAll('.preset-card').forEach(b => b.onclick = () => presetMenu(b.dataset.id));
+  $('#builtinList').innerHTML = BUILT.map(cardHtml).join('');
+  document.querySelectorAll('#home .preset-card').forEach(b => b.onclick = () => presetMenu(b.dataset.id));
+  // おすすめのサムネイルは見本の風景にかけて作る（少しずつ）
+  (async () => {
+    for (const img of document.querySelectorAll('#builtinList img[data-id]')) {
+      await sleep(0);
+      img.src = sampleThumb(getPreset(img.dataset.id));
+    }
+  })();
+}
+const cardHtml = p => `<button class="preset-card" data-id="${p.id}">
+    <img src="${p.thumb || ''}" ${p.builtin ? `data-id="${p.id}"` : ''} alt="">
+    <div><b>${esc(p.name)}</b><small>${p.builtin ? esc(p.kind) : new Date(p.created).toLocaleDateString('ja-JP')}</small></div></button>`;
+
+// サムネイル用の見本の風景（空・山・水・木・道・人）。著作物を使わないよう図形で描く
+let sceneCanvas = null;
+function sampleScene() {
+  if (sceneCanvas) return sceneCanvas;
+  const c = document.createElement('canvas'), W = 240, H = 180;
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  let g = x.createLinearGradient(0, 0, 0, 95);
+  g.addColorStop(0, '#3f7cc4'); g.addColorStop(1, '#d9e6ee');
+  x.fillStyle = g; x.fillRect(0, 0, W, 95);
+  g = x.createRadialGradient(180, 55, 2, 180, 55, 60);
+  g.addColorStop(0, 'rgba(255,248,220,1)'); g.addColorStop(0.25, 'rgba(255,225,160,.7)'); g.addColorStop(1, 'rgba(255,220,160,0)');
+  x.fillStyle = g; x.fillRect(0, 0, W, 120);
+  x.fillStyle = '#7d8ea3';
+  x.beginPath(); x.moveTo(0, 95); x.lineTo(40, 58); x.lineTo(80, 80); x.lineTo(130, 45); x.lineTo(190, 88); x.lineTo(W, 70); x.lineTo(W, 100); x.lineTo(0, 100); x.fill();
+  g = x.createLinearGradient(0, 95, 0, 125);
+  g.addColorStop(0, '#2f8f96'); g.addColorStop(1, '#1e5f73');
+  x.fillStyle = g; x.fillRect(0, 95, W, 30);
+  x.fillStyle = '#4d7a35'; x.fillRect(0, 122, W, 58);
+  x.fillStyle = '#3a5f29';
+  for (let i = 0; i < 9; i++) { x.beginPath(); x.arc(10 + i * 27, 124, 14, Math.PI, 0); x.fill(); }
+  g = x.createLinearGradient(0, 125, 0, H);
+  g.addColorStop(0, '#a4876a'); g.addColorStop(1, '#6f5440');
+  x.fillStyle = g;
+  x.beginPath(); x.moveTo(100, 125); x.lineTo(130, 125); x.lineTo(185, H); x.lineTo(55, H); x.fill();
+  x.fillStyle = '#c8473a'; x.fillRect(150, 128, 18, 32);
+  x.fillStyle = '#e2b08e'; x.beginPath(); x.arc(159, 121, 7, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#e9b33c'; x.fillRect(30, 140, 22, 16);
+  x.fillStyle = '#141414'; x.fillRect(196, 112, 6, 60);
+  sceneCanvas = c;
+  return c;
+}
+const thumbCache = {};
+function sampleThumb(p) {
+  if (!thumbCache[p.id]) thumbCache[p.id] = applySmall(sampleScene(), p.params).toDataURL('image/jpeg', 0.85);
+  return thumbCache[p.id];
 }
 function presetMenu(id) {
-  const p = db.presets.find(x => x.id === id);
+  const p = getPreset(id);
   if (!p) return;
-  openSheet(`<h3>${esc(p.name)}</h3><div class="chips" style="margin:6px 0 14px">${describe(p.params).map(chip).join('')}</div>
+  openSheet(`<h3>${esc(p.name)}</h3>${p.note ? `<p class="sub">${esc(p.note)}</p>` : ''}<div class="chips" style="margin:6px 0 14px">${describe(p.params).map(chip).join('')}</div>
     <div class="sheet-list">
       <button class="btn primary" data-a="edit">このプリセットで写真を編集</button>
       <button class="btn" data-a="batch">まとめて適用（複数枚）</button>
-      <button class="btn" data-a="rename">名前を変更</button>
-      <button class="btn danger" data-a="del">削除</button>
+      ${p.builtin ? '' : `<button class="btn" data-a="rename">名前を変更</button>
+      <button class="btn danger" data-a="del">削除</button>`}
     </div>`, sh => {
     sh.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
       const a = b.dataset.a;
@@ -461,7 +511,7 @@ async function openEditor(file, presetId) {
     const tiny = drawScaled(img, 120);
     S.photo = { img, name: file.name, prev, tiny, hist: histogram(pixelsOf(drawScaled(img, 256))) };
     S.params = E.defaults(); S.strength = 100; S.presetId = null; S.dirty = false;
-    const p = presetId && db.presets.find(x => x.id === presetId);
+    const p = presetId && getPreset(presetId);
     if (p) { S.params = E.normalize(p.params); S.presetId = p.id; }
     S.tab = 'preset';
     show('editor');
@@ -539,12 +589,12 @@ function renderPanel() {
 function panelPreset(el) {
   const strip = document.createElement('div');
   strip.className = 'strip';
-  const items = [{ id: null, name: 'なし' }, ...db.presets];
+  const items = [{ id: null, name: 'なし' }, ...allPresets()];
   strip.innerHTML = items.map(p => `<button class="pv${S.presetId === p.id ? ' on' : ''}" data-id="${p.id || ''}">${p.id ? '' : '<span class="pv-none"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg></span>'}<span>${esc(p.name)}</span></button>`).join('');
   el.append(strip);
   strip.querySelectorAll('.pv').forEach(b => {
     b.onclick = () => {
-      const p = db.presets.find(x => x.id === b.dataset.id);
+      const p = getPreset(b.dataset.id);
       if (S.dirty && !confirm('今の調整を置きかえますか？')) return;
       S.params = p ? E.normalize(p.params) : E.defaults();
       S.presetId = p ? p.id : null; S.strength = 100; S.dirty = false;
@@ -558,15 +608,9 @@ function panelPreset(el) {
     for (const b of btns) {
       await sleep(0);
       if (!b.isConnected) return;
-      const p = db.presets.find(x => x.id === b.dataset.id);
-      b.prepend(applySmall(S.photo.tiny, p.params));
+      b.prepend(applySmall(S.photo.tiny, getPreset(b.dataset.id).params));
     }
   })();
-  if (!db.presets.length) {
-    const n = document.createElement('p'); n.className = 'note'; n.style.margin = '4px 0 6px';
-    n.textContent = 'プリセットはホームの「お手本からプリセットを作る」で作れます。';
-    el.append(n);
-  }
   el.append(slider(['strength', '強さ', 0, 150, 1, v => v + '%'], () => S.strength, v => { S.strength = v; }, 100));
   const bt = document.createElement('div');
   bt.className = 'panel-btns';
