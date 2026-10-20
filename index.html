@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>写真編集</title>
+<meta name="description" content="編集済みのお手本写真やスクショから、その雰囲気を再現するプリセットを作って自分の写真に適用できる写真編集アプリ">
+<meta name="theme-color" content="#0B0B0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="写真編集">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ホーム -->
+<section id="home" class="view">
+  <header class="page-h"><h1>写真編集</h1></header>
+  <div class="actions">
+    <button class="action" id="btnEdit">
+      <span class="action-ic"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+      <span><b>写真を編集</b><small>写真を選んで、プリセットやスライダーで仕上げる</small></span>
+    </button>
+    <button class="action" id="btnMake">
+      <span class="action-ic accent"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2 2.2.8-2.2.8L18 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+      <span><b>お手本からプリセットを作る</b><small>編集済みの写真やスクショから雰囲気を読み取ります</small></span>
+    </button>
+  </div>
+  <h2 class="sec-h">プリセット</h2>
+  <div id="presetList" class="preset-grid"></div>
+</section>
+
+<!-- お手本からプリセットを作る -->
+<section id="make" class="view" hidden>
+  <header class="bar">
+    <button class="bar-btn" data-go="home" aria-label="戻る"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="bar-title">お手本からプリセットを作る</span>
+    <span class="bar-btn"></span>
+  </header>
+  <div class="make-body">
+    <p class="hint">Lightroom などで編集した写真や、インスタの投稿のスクショを入れてください。<b>同じ雰囲気の写真を 2〜5 枚</b>入れると、写っている物の影響が減って精度が上がります。</p>
+    <div id="refList" class="ref-grid"></div>
+    <button class="btn primary wide" id="btnAnalyze" disabled>雰囲気を読み取る</button>
+    <div id="makeResult"></div>
+  </div>
+</section>
+
+<!-- 編集 -->
+<section id="editor" class="view editor" hidden>
+  <header class="bar">
+    <button class="bar-btn" id="edBack" aria-label="戻る"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="bar-title" id="edTitle"></span>
+    <button class="bar-btn text" id="edExport">書き出し</button>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="stage-tip" id="stageTip">長押しで元の写真</div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="panel" id="panel"></div>
+</section>
+
+<!-- 切り抜き -->
+<section id="crop" class="crop" hidden>
+  <div class="crop-stage" id="cropStage">
+    <canvas id="cropCv"></canvas>
+    <div class="crop-box" id="cropBox"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div>
+  </div>
+  <p class="crop-tip">写真の部分だけを囲んでください（画面の枠や文字が入ると色がずれます）</p>
+  <div class="crop-bar">
+    <button class="btn" id="cropAll">全体</button>
+    <button class="btn" id="cropAuto">自動</button>
+    <button class="btn primary" id="cropDone">完了</button>
+  </div>
+</section>
+
+<div id="sheetBack" class="sheet-back" hidden></div>
+<section id="sheet" class="sheet" hidden></section>
+<div id="busy" class="busy" hidden><div class="spin"></div><p id="busyText"></p></div>
+<div id="toast" class="toast" hidden></div>
+<input type="file" id="filePhoto" accept="image/*" hidden>
+<input type="file" id="fileRefs" accept="image/*" multiple hidden>
+<input type="file" id="fileBatch" accept="image/*" multiple hidden>
+
+<script src="engine.js"></script>
+<script src="extract.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
